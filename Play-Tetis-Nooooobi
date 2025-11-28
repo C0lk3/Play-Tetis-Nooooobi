@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play Tetis Nooooobi!!!</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        /* Custom styles for the retro pixel effect and game grid */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        .retro-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* The main game container. Max width 240px for ultra-small mobile screens */
+        #game-container {
+            width: 100%;
+            max-width: 240px; 
+            margin: 0 auto;
+            border: 6px solid #000; 
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.7), inset 0 0 6px rgba(255, 255, 0, 0.5);
+            background-color: #1a1a1a;
+            border-radius: 4px;
+        }
+        
+        #game-board {
+            /* 10 columns wide game board */
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(20, 1fr);
+            aspect-ratio: 10 / 20; 
+            background-color: #000;
+            border: 3px solid #444;
+        }
+
+        .grid-cell {
+            border: 1px solid #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem;
+            line-height: 1;
+            box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Styling for the large mobile buttons */
+        .game-button {
+            transition: transform 0.1s;
+            box-shadow: 0 3px 0 0 #6d28d9; 
+            padding: 0.5rem; 
+        }
+        .game-button:active {
+            transform: translateY(3px);
+            box-shadow: 0 0 0 0 #6d28d9;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-3 flex flex-col items-center justify-start">
+
+    <div id="app-screen" class="w-full max-w-xl text-center">
+
+        <!-- START SCREEN -->
+        <div id="start-screen" class="flex flex-col items-center justify-center h-full space-y-6">
+            <h1 class="retro-font text-3xl sm:text-4xl text-yellow-400 p-3 border-b-4 border-yellow-400">
+                Play Tetis Nooooobi!!!
+            </h1>
+            <button id="play-button" 
+                class="retro-font px-8 py-4 text-lg sm:text-xl bg-green-500 hover:bg-green-600 rounded-lg shadow-xl transition duration-150 transform hover:scale-105"
+            >
+                START GAME
+            </button>
+            <p id="audio-prompt" class="text-xs text-red-400 mt-2 hidden">Tap START to enable sound!</p>
+            <p class="text-gray-400 mt-6 text-xs">Use arrow keys or D-Pad below to play!</p>
+        </div>
+
+        <!-- GAME SCREEN -->
+        <div id="game-screen" class="hidden">
+            <div id="scoreboard" class="flex justify-between w-full max-w-[240px] mx-auto p-1 mb-3 retro-font text-xs sm:text-sm">
+                <span>Score: <span id="score">0</span></span>
+                <span>Level: <span id="level">1</span></span>
+            </div>
+
+            <div id="game-container" class="mb-5">
+                <div id="game-board">
+                    <!-- Game cells will be generated here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Mobile Controls D-Pad -->
+            <div id="controls" class="flex flex-col items-center w-full max-w-[240px] mx-auto">
+                
+                <!-- Next Piece Preview -->
+                <div class="mb-3 p-2 bg-gray-800 rounded-lg border-2 border-purple-500 w-full">
+                    <h3 class="retro-font text-xs text-purple-400 mb-1">NEXT:</h3>
+                    <div id="next-piece-preview" class="mx-auto" style="width: 60px; height: 60px;">
+                        <!-- Preview cells generated here -->
+                    </div>
+                </div>
+
+                <!-- Controls Grid -->
+                <div class="grid grid-cols-3 gap-2 w-full">
+                    <!-- Top Row: ROTATE -->
+                    <button id="btn-rotate" class="col-span-3 game-button bg-purple-600 text-white p-2 rounded-xl retro-font text-sm">
+                        ROTATE
+                    </button>
+                    
+                    <!-- Middle Row: LEFT, DOWN, RIGHT -->
+                    <button id="btn-left" class="game-button bg-blue-500 text-white p-2 rounded-xl retro-font text-lg">
+                        &lt;
+                    </button>
+                    <button id="btn-down" class="game-button bg-yellow-500 text-gray-900 p-2 rounded-xl retro-font text-sm">
+                        DOWN
+                    </button>
+                    <button id="btn-right" class="game-button bg-blue-500 text-white p-2 rounded-xl retro-font text-lg">
+                        &gt;
+                    </button>
+                    
+                    <!-- Bottom Row: HARD DROP -->
+                    <button id="btn-hard-drop" class="col-span-3 game-button bg-red-600 text-white p-2 rounded-xl retro-font text-xs mt-2">
+                        HARD DROP
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME OVER MODAL -->
+        <div id="game-over-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center z-50">
+            <div class="bg-gray-800 p-5 rounded-xl shadow-2xl border-4 border-red-500 text-center space-y-3">
+                <h2 class="retro-font text-xl text-red-400">GAME OVER!</h2>
+                <p class="text-md">Final Score: <span id="final-score" class="text-yellow-400">0</span></p>
+                <button id="restart-button" class="retro-font px-3 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-xs">
+                    Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Tetris Game Logic - Poop Edition!
+        
+        // --- CONFIG ---
+        const GRID_WIDTH = 10;
+        const GRID_HEIGHT = 20;
+        const INITIAL_DROP_SPEED = 1000; // ms
+        const SCORE_PER_LINE = 100;
+        const LEVEL_UP_LINES = 10;
+        const BLOCK_CONTENT = '💩';
+        const EMPTY_CELL = 0;
+        
+        // --- DOM Elements ---
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameBoard = document.getElementById('game-board');
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const nextPiecePreview = document.getElementById('next-piece-preview');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const audioPrompt = document.getElementById('audio-prompt');
+
+        // --- GAME SOUNDS (Tone.js) ---
+        let audioContextStarted = false;
+
+        // Setup the sound synths 
+        const moveSynth = new Tone.Synth({
+            oscillator: { type: "square" },
+            envelope: { attack: 0.001, decay: 0.05, sustain: 0.0, release: 0.01 }
+        }).toDestination();
+
+        const lineClearSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sawtooth" },
+            envelope: { attack: 0.01, decay: 0.2, sustain: 0.0, release: 0.1 }
+        }).toDestination();
+
+        const lockSynth = new Tone.MembraneSynth({
+            envelope: { attack: 0.001, decay: 0.1, sustain: 0.0, release: 0.05 },
+            octaves: 0.5
+        }).toDestination();
+
+        const gameOverNoise = new Tone.NoiseSynth({
+            noise: { type: "pink" },
+            envelope: { attack: 0.01, decay: 0.5, sustain: 0.0 }
+        }).toDestination();
+
+        function playMoveSound() {
+            if (!audioContextStarted) return;
+            moveSynth.triggerAttackRelease("C5", "32n");
+        }
+
+        function playLockSound() {
+            if (!audioContextStarted) return;
+            lockSynth.triggerAttackRelease("C2", "8n");
+        }
+
+        function playLineClearSound(lines) {
+            if (!audioContextStarted) return;
+            const root = lines === 4 ? "C5" : "C4"; 
+            lineClearSynth.triggerAttackRelease([root, "E4", "G4"], "8n");
+        }
+        
+        function playLevelUpSound() {
+            if (!audioContextStarted) return;
+            const now = Tone.now();
+            moveSynth.triggerAttackRelease("G5", "16n", now);
+            moveSynth.triggerAttackRelease("C6", "16n", now + 0.08);
+        }
+
+        function playGameOverSound() {
+            if (!audioContextStarted) return;
+            gameOverNoise.triggerAttackRelease("8n");
+            lockSynth.triggerAttackRelease("G#1", "4n");
+        }
+
+
+        // --- GAME STATE ---
+        let gameGrid;
+        let currentPiece;
+        let nextPiece;
+        let pieceX;
+        let pieceY;
+        let score = 0;
+        let linesCleared = 0;
+        let level = 1;
+        let dropInterval;
+        let isGameOver = false;
+
+        // --- PIECE DEFINITIONS (Shapes & Colors) ---
+        const PIECES = [
+            { shape: [[1, 1, 1, 1]], id: 1 },
+            { shape: [[2, 0, 0], [2, 2, 2]], id: 2 },
+            { shape: [[0, 0, 3], [3, 3, 3]], id: 3 },
+            { shape: [[4, 4], [4, 4]], id: 4 },
+            { shape: [[0, 5, 5], [5, 5, 0]], id: 5 },
+            { shape: [[0, 6, 0], [6, 6, 6]], id: 6 },
+            { shape: [[7, 7, 0], [0, 7, 7]], id: 7 },
+        ];
+
+        // --- CORE GAME FUNCTIONS ---
+
+        function createGrid(width, height) {
+            return Array.from({ length: height }, () => Array(width).fill(EMPTY_CELL));
+        }
+
+        function rotate(shape) {
+            const rows = shape.length;
+            const cols = shape[0].length;
+            const newShape = createGrid(rows, cols);
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    newShape[x][rows - 1 - y] = shape[y][x];
+                }
+            }
+            return newShape;
+        }
+
+        function checkCollision(grid, shape, x, y) {
+            const pieceRows = shape.length;
+            const pieceCols = shape[0].length;
+
+            for (let row = 0; row < pieceRows; row++) {
+                for (let col = 0; col < pieceCols; col++) {
+                    if (shape[row][col] !== EMPTY_CELL) {
+                        const newX = x + col;
+                        const newY = y + row;
+
+                        // Check boundaries
+                        if (newX < 0 || newX >= GRID_WIDTH || newY >= GRID_HEIGHT) {
+                            return true; 
+                        }
+
+                        // Check collision with locked blocks (only for y >= 0)
+                        if (newY >= 0 && grid[newY][newX] !== EMPTY_CELL) {
+                            return true; 
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function generateNewPiece() {
+            const randomIndex = Math.floor(Math.random() * PIECES.length);
+            return {
+                ...PIECES[randomIndex],
+                shape: PIECES[randomIndex].shape.map(row => [...row]), 
+            };
+        }
+
+        function placePiece() {
+            if (nextPiece) {
+                currentPiece = nextPiece;
+            } else {
+                currentPiece = generateNewPiece();
+            }
+            nextPiece = generateNewPiece();
+
+            pieceX = Math.floor((GRID_WIDTH - currentPiece.shape[0].length) / 2);
+            pieceY = 0;
+
+            // GAME OVER CHECK: If the new piece collides immediately, the game is over
+            if (checkCollision(gameGrid, currentPiece.shape, pieceX, pieceY)) {
+                endGame();
+                return; // Stop game logic execution
+            }
+            drawGame();
+        }
+
+        function lockPiece() {
+            const shape = currentPiece.shape;
+            const id = currentPiece.id;
+            
+            playLockSound();
+
+            for (let row = 0; row < shape.length; row++) {
+                for (let col = 0; col < shape[0].length; col++) {
+                    if (shape[row][col] !== EMPTY_CELL) {
+                        if (pieceY + row >= 0) {
+                            gameGrid[pieceY + row][pieceX + col] = id;
+                        }
+                    }
+                }
+            }
+            clearLines();
+            // Attempt to place the next piece, which includes the game over check
+            placePiece();
+        }
+
+        function movePiece(dx, dy) {
+            if (isGameOver) return false;
+            
+            const pieceCanMove = !checkCollision(gameGrid, currentPiece.shape, pieceX + dx, pieceY + dy);
+
+            if (pieceCanMove) {
+                pieceX += dx;
+                pieceY += dy;
+                drawGame();
+                
+                if (dx !== 0 || dy > 0) {
+                    playMoveSound();
+                }
+                
+                return true;
+            }
+            
+            // Fix: If collision on downward move (dy > 0) AND the piece is at the bottom/top of a block, lock immediately
+            if (dy > 0) {
+                lockPiece();
+                return false;
+            }
+            
+            return false;
+        }
+
+        function rotateCurrentPiece() {
+            if (isGameOver) return;
+            const rotatedShape = rotate(currentPiece.shape);
+            
+            const offsets = [
+                [0, 0], 
+                [-1, 0], 
+                [1, 0],  
+                [0, -1], 
+            ];
+
+            for (const [offsetX, offsetY] of offsets) {
+                if (!checkCollision(gameGrid, rotatedShape, pieceX + offsetX, pieceY + offsetY)) {
+                    currentPiece.shape = rotatedShape;
+                    pieceX += offsetX;
+                    pieceY += offsetY;
+                    drawGame();
+                    playMoveSound(); 
+                    return;
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (isGameOver) return;
+            let finalY = pieceY;
+            // Find the lowest possible position
+            while (!checkCollision(gameGrid, currentPiece.shape, pieceX, finalY + 1)) {
+                finalY++;
+            }
+            if (finalY !== pieceY) {
+                lockSynth.triggerAttackRelease("C3", "4n"); 
+            }
+            pieceY = finalY;
+            // Lock the piece instantly
+            lockPiece(); 
+        }
+
+        function clearLines() {
+            let linesToClear = 0;
+            const newGrid = [];
+
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                if (gameGrid[y].every(cell => cell !== EMPTY_CELL)) {
+                    linesToClear++;
+                } else {
+                    newGrid.push(gameGrid[y]);
+                }
+            }
+
+            while (newGrid.length < GRID_HEIGHT) {
+                newGrid.unshift(Array(GRID_WIDTH).fill(EMPTY_CELL));
+            }
+
+            gameGrid = newGrid;
+            
+            if (linesToClear > 0) {
+                playLineClearSound(linesToClear);
+                score += SCORE_PER_LINE * linesToClear * linesToClear; 
+                linesCleared += linesToClear;
+                updateScoreAndLevel();
+            }
+        }
+        
+        function updateScoreAndLevel() {
+            const oldLevel = level;
+            const newLevel = Math.floor(linesCleared / LEVEL_UP_LINES) + 1;
+            
+            if (newLevel > oldLevel) {
+                level = newLevel;
+                playLevelUpSound();
+                clearInterval(dropInterval);
+                const newSpeed = INITIAL_DROP_SPEED / level;
+                dropInterval = setInterval(gameLoop, newSpeed);
+            }
+            
+            scoreDisplay.textContent = score;
+            levelDisplay.textContent = level;
+        }
+
+        function renderGridCells() {
+            // Setup the main game board
+            gameBoard.innerHTML = '';
+            for (let i = 0; i < GRID_WIDTH * GRID_HEIGHT; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell transition-colors duration-50';
+                cell.dataset.index = i;
+                gameBoard.appendChild(cell);
+            }
+            // Setup the next piece preview board
+            nextPiecePreview.innerHTML = '';
+            for (let i = 0; i < 16; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell bg-gray-900 border-gray-700';
+                nextPiecePreview.appendChild(cell);
+            }
+            nextPiecePreview.style.gridTemplateColumns = 'repeat(4, 1fr)';
+            nextPiecePreview.style.gridTemplateRows = 'repeat(4, 1fr)';
+            nextPiecePreview.style.display = 'grid';
+        }
+
+        function drawGame() {
+            if (isGameOver) return;
+            
+            const cells = gameBoard.children;
+            let i = 0;
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    const cell = cells[i];
+                    cell.textContent = '';
+                    if (gameGrid[y][x] !== EMPTY_CELL) {
+                        cell.textContent = BLOCK_CONTENT;
+                        cell.style.backgroundColor = 'rgb(100, 40, 0)';
+                        cell.style.borderColor = '#333';
+                    } else {
+                        cell.style.backgroundColor = '#000';
+                        cell.style.borderColor = '#111';
+                    }
+                    i++;
+                }
+            }
+
+            // Draw the current falling piece
+            const shape = currentPiece.shape;
+            for (let row = 0; row < shape.length; row++) {
+                for (let col = 0; col < shape[0].length; col++) {
+                    if (shape[row][col] !== EMPTY_CELL) {
+                        const absY = pieceY + row;
+                        const absX = pieceX + col;
+
+                        if (absY >= 0 && absY < GRID_HEIGHT && absX >= 0 && absX < GRID_WIDTH) {
+                            const index = absY * GRID_WIDTH + absX;
+                            cells[index].textContent = BLOCK_CONTENT;
+                            cells[index].style.backgroundColor = 'rgb(120, 60, 0)';
+                            cells[index].style.borderColor = '#444';
+                        }
+                    }
+                }
+            }
+
+            // Draw the next piece preview
+            const previewCells = nextPiecePreview.children;
+            const nextShape = nextPiece.shape;
+            for (let k = 0; k < 16; k++) {
+                previewCells[k].textContent = '';
+                previewCells[k].style.backgroundColor = '#1a1a1a';
+            }
+
+            for (let row = 0; row < nextShape.length; row++) {
+                for (let col = 0; col < nextShape[0].length; col++) {
+                    if (nextShape[row][col] !== EMPTY_CELL) {
+                        const index = row * 4 + col;
+                        if (index < 16) {
+                             previewCells[index].textContent = BLOCK_CONTENT;
+                             previewCells[index].style.backgroundColor = 'rgb(120, 60, 0)';
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Game loop only handles the automatic downward movement
+        function gameLoop() {
+            // movePiece handles the collision check and calls lockPiece() immediately if a collision is found.
+            movePiece(0, 1);
+        }
+
+        async function initializeAudioContext() {
+            if (Tone.context.state !== 'running') {
+                await Tone.start();
+                audioContextStarted = true;
+                audioPrompt.classList.add('hidden');
+            }
+        }
+
+        async function startGame() {
+            // Re-initialize game state
+            if (!audioContextStarted) {
+                await initializeAudioContext();
+            }
+
+            score = 0;
+            linesCleared = 0;
+            level = 1;
+            isGameOver = false;
+            gameGrid = createGrid(GRID_WIDTH, GRID_HEIGHT);
+            
+            nextPiece = generateNewPiece();
+            placePiece(); // Includes Game Over check
+
+            updateScoreAndLevel(); 
+            
+            if (dropInterval) clearInterval(dropInterval);
+            dropInterval = setInterval(gameLoop, INITIAL_DROP_SPEED / level);
+
+            // Update UI state
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            gameOverModal.classList.add('hidden');
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(dropInterval); // Stop the falling piece loop
+            playGameOverSound();
+            finalScoreDisplay.textContent = score;
+            gameOverModal.classList.remove('hidden'); // Show the modal
+        }
+        
+        // --- EVENT HANDLERS ---
+        
+        function handleKeydown(e) {
+            // Guard clause to prevent input when game is over
+            if (isGameOver) return; 
+            switch (e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    // Gravity is already handled by gameLoop. This is for faster descent.
+                    movePiece(0, 1); 
+                    break;
+                case 'ArrowUp':
+                case ' ': 
+                    rotateCurrentPiece();
+                    break;
+                case 'Enter': 
+                    hardDrop();
+                    break;
+            }
+        }
+        
+        // --- INITIALIZATION ---
+        
+        document.getElementById('play-button').addEventListener('click', startGame);
+        document.getElementById('restart-button').addEventListener('click', startGame);
+        document.addEventListener('keydown', handleKeydown);
+
+        // Mobile Controls
+        document.getElementById('btn-left').addEventListener('click', () => movePiece(-1, 0));
+        document.getElementById('btn-right').addEventListener('click', () => movePiece(1, 0));
+        document.getElementById('btn-down').addEventListener('click', () => movePiece(0, 1));
+        document.getElementById('btn-rotate').addEventListener('click', rotateCurrentPiece);
+        document.getElementById('btn-hard-drop').addEventListener('click', hardDrop);
+
+        // Initial DOM rendering
+        renderGridCells();
+        
+        if (Tone.context.state !== 'running') {
+            audioPrompt.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
+
