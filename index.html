@@ -2,615 +2,815 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Play Tetis Nooooobi!!!</title>
-    <!-- Load Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tetis - RPG Boss Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Tone.js for sound effects -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
-        /* Custom styles for the retro pixel effect and game grid */
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
-        .retro-font {
+        body {
+            background-color: #050505;
+            color: #ffffff;
             font-family: 'Press Start 2P', monospace;
+            overflow: hidden;
+            touch-action: manipulation;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 10px;
+            margin: 0;
+            height: 100vh;
         }
 
-        /* The main game container. Max width 240px for ultra-small mobile screens */
+        .retro-font { font-family: 'Press Start 2P', monospace; }
+
+        /* INTRO SCREEN STYLES */
+        #developer-intro {
+            position: fixed;
+            inset: 0;
+            background: black;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .intro-line {
+            opacity: 0;
+            margin: 15px 0;
+            transition: opacity 2s ease;
+            font-size: 10px;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        .intro-line.visible { opacity: 1; }
+        .intro-line.highlight { color: #ff0000; font-size: 14px; }
+        .intro-line.any-key { margin-top: 40px; font-size: 8px; color: #666; animation: blink 1s infinite; }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* CONTROL SELECTION */
+        #control-setup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        /* GAME STYLES */
         #game-container {
             width: 100%;
-            max-width: 240px; 
+            max-width: 220px;
             margin: 0 auto;
-            border: 6px solid #000; 
-            box-shadow: 0 0 10px rgba(255, 0, 255, 0.7), inset 0 0 6px rgba(255, 255, 0, 0.5);
-            background-color: #1a1a1a;
-            border-radius: 4px;
+            border: 2px solid #221111; 
+            background-color: #000;
+            position: relative;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+            overflow: hidden;
         }
         
         #game-board {
-            /* 10 columns wide game board */
             display: grid;
             grid-template-columns: repeat(10, 1fr);
             grid-template-rows: repeat(20, 1fr);
             aspect-ratio: 10 / 20; 
-            background-color: #000;
-            border: 3px solid #444;
+            position: relative;
+            z-index: 10;
         }
 
+        #hell-fog {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 40;
+            opacity: 0;
+            background: #000;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* DIABLO BACKGROUND STYLES */
+        #diablo-bg {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 160px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1;
+            transition: opacity 1.5s ease-in-out;
+            filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.3)); /* Reduced shadow */
+        }
+
+        .boss-active #diablo-bg {
+            opacity: 0.15; /* Reduced opacity from 0.3 */
+            animation: breathe 4s ease-in-out infinite; /* Slower breathing */
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.12; }
+            50% { transform: scale(1.08); opacity: 0.2; }
+        }
+
+        .blind-active { opacity: 1 !important; }
+
         .grid-cell {
-            border: 1px solid #111;
+            border: 1px solid rgba(255, 255, 255, 0.05);
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 0.9rem;
-            line-height: 1;
-            box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.2);
+            font-size: 0.7rem;
+            position: relative;
         }
 
-        /* Styling for the large mobile buttons */
-        .game-button {
-            transition: transform 0.1s;
-            box-shadow: 0 3px 0 0 #6d28d9; 
-            padding: 0.5rem; 
+        .active-block { z-index: 45 !important; }
+
+        .arcade-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            width: 100%;
+            max-width: 280px;
+            margin: 10px auto 0;
         }
-        .game-button:active {
-            transform: translateY(3px);
-            box-shadow: 0 0 0 0 #6d28d9;
+
+        .ctrl-btn {
+            background: linear-gradient(180deg, #1a0505 0%, #050202 100%);
+            border: 2px solid #3a0000;
+            border-bottom-width: 4px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #cc4444;
+            height: 54px;
+            transition: all 0.05s;
+            user-select: none;
         }
+
+        .ctrl-btn:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+            background: #3a0000;
+            color: white;
+        }
+
+        .next-preview-container {
+            background: #000;
+            border: 2px solid #3a0000;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 54px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .next-label {
+            position: absolute;
+            top: 4px;
+            font-size: 5px;
+            color: #cc4444;
+            text-transform: uppercase;
+        }
+
+        #next-piece-preview {
+            display: grid;
+            gap: 1px;
+            margin-top: 10px;
+        }
+
+        .ctrl-btn svg { width: 22px; height: 22px; fill: currentColor; }
+        .btn-action { color: #a855f7; border-color: #581c87; }
+        .btn-danger { color: #ffffff; background: linear-gradient(180deg, #7f1d1d 0%, #450a0a 100%); border-color: #450a0a; }
+
+        .skill-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            width: 100%;
+            max-width: 280px;
+            margin: 8px auto;
+        }
+
+        .skill-btn {
+            background: #111;
+            border: 1px solid #333;
+            padding: 6px 2px;
+            font-size: 5px;
+            text-align: center;
+            color: #555;
+            transition: all 0.2s;
+        }
+
+        .skill-btn.available {
+            border-color: #fbbf24;
+            color: #fbbf24;
+            box-shadow: 0 0 3px #fbbf24;
+            cursor: pointer;
+        }
+
+        .mana-bar-container {
+            width: 100%;
+            max-width: 220px;
+            height: 10px;
+            background: #111;
+            margin: 5px auto;
+            border: 1px solid #333;
+            position: relative;
+        }
+
+        #mana-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2563eb, #3b82f6);
+            transition: width 0.3s;
+        }
+
+        .boss-bar-container {
+            width: 100%;
+            max-width: 220px;
+            height: 12px;
+            background: #111;
+            margin: 5px auto;
+            border: 1px solid #900;
+            display: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #boss-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #7f1d1d, #ef4444);
+            transition: width 0.5s ease-out;
+        }
+
+        .diablo-text { color: #ef4444; text-shadow: 1px 1px #000; }
+
+        .curse-overlay {
+            position: absolute; inset: 0; background: rgba(255, 0, 0, 0.1);
+            pointer-events: none; display: none; z-index: 50; animation: pulse 0.8s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 0.1; } 50% { opacity: 0.3; } 100% { opacity: 0.1; } }
+        
+        /* SUBTLE SCREEN SHAKE */
+        .shake { animation: subtle-shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes subtle-shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(1px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-1px, 0, 0); }
+            40%, 60% { transform: translate3d(1px, 0, 0); }
+        }
+
+        .fade-in { animation: fadeIn 1s forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .scanline {
+            width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            position: absolute; top: 0; left: 0; pointer-events: none; z-index: 100; background-size: 100% 4px;
+        }
+
+        .skill-flash { position: absolute; inset: 0; pointer-events: none; z-index: 60; display: none; }
+
+        #story-content {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        #story-content::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-3 flex flex-col items-center justify-start">
+<body>
 
-    <div id="app-screen" class="w-full max-w-xl text-center">
+    <div class="scanline"></div>
 
-        <!-- START SCREEN -->
-        <div id="start-screen" class="flex flex-col items-center justify-center h-full space-y-6">
-            <h1 class="retro-font text-3xl sm:text-4xl text-yellow-400 p-3 border-b-4 border-yellow-400">
-                Play Tetis Nooooobi!!!
-            </h1>
-            <button id="play-button" 
-                class="retro-font px-8 py-4 text-lg sm:text-xl bg-green-500 hover:bg-green-600 rounded-lg shadow-xl transition duration-150 transform hover:scale-105"
-            >
-                START GAME
-            </button>
-            <p id="audio-prompt" class="text-xs text-red-400 mt-2 hidden">Tap START to enable sound!</p>
-            <p class="text-gray-400 mt-6 text-xs">Use arrow keys or D-Pad below to play!</p>
-        </div>
+    <!-- CINEMATIC INTRO -->
+    <div id="developer-intro">
+        <div id="intro-l1" class="intro-line">A Game by Colke</div>
+        <div id="intro-l2" class="intro-line">Fallen Angels and Phoenix Corporation</div>
+        <div id="intro-l3" class="intro-line">Presents</div>
+        <div id="intro-l4" class="intro-line highlight">PLAY TETIS NOOOOOBI!</div>
+        <div id="intro-l5" class="intro-line">Powered by Unity</div>
+        <div id="intro-l6" class="intro-line">© 2026 Fallen Angels and Phoenix Corporation. All rights reserved.</div>
+        <div id="intro-l7" class="intro-line any-key">Press Any Key to Start</div>
+    </div>
 
-        <!-- GAME SCREEN -->
-        <div id="game-screen" class="hidden">
-            <div id="scoreboard" class="flex justify-between w-full max-w-[240px] mx-auto p-1 mb-3 retro-font text-xs sm:text-sm">
-                <span>Score: <span id="score">0</span></span>
-                <span>Level: <span id="level">1</span></span>
-            </div>
+    <!-- CONTROL SETUP SCREEN -->
+    <div id="control-setup">
+        <h2 class="text-red-600 text-[10px] mb-4">CHOOSE YOUR WEAPON</h2>
+        <button id="set-mobile" class="w-64 py-4 bg-blue-900/30 border border-blue-500 text-white text-[10px] tracking-widest hover:bg-blue-800 transition-all">MOBILE CONTROLS (BUTTONS)</button>
+        <button id="set-pc" class="w-64 py-4 bg-red-900/30 border border-red-500 text-white text-[10px] tracking-widest hover:bg-red-800 transition-all">PC CONTROLS (KEYBOARD)</button>
+    </div>
 
-            <div id="game-container" class="mb-5">
-                <div id="game-board">
-                    <!-- Game cells will be generated here by JavaScript -->
-                </div>
-            </div>
+    <div id="app-wrapper" class="w-full max-w-md z-10 flex flex-col items-center">
 
-            <!-- Mobile Controls D-Pad -->
-            <div id="controls" class="flex flex-col items-center w-full max-w-[240px] mx-auto">
+        <div id="story-screen" class="hidden flex flex-col items-center justify-center min-h-[90vh] w-full">
+            <div class="p-6 border-2 border-red-950/30 bg-black/90 shadow-[0_0_20px_rgba(255,0,0,0.1)] max-w-sm w-full text-center space-y-4">
+                <h1 class="text-red-700 text-[10px] tracking-[0.3em] border-b border-red-950/30 pb-4">PROLOGUE: THE ETERNAL STRUGGLE</h1>
                 
-                <!-- Next Piece Preview -->
-                <div class="mb-3 p-2 bg-gray-800 rounded-lg border-2 border-purple-500 w-full">
-                    <h3 class="retro-font text-xs text-purple-400 mb-1">NEXT:</h3>
-                    <div id="next-piece-preview" class="mx-auto" style="width: 60px; height: 60px;">
-                        <!-- Preview cells generated here -->
-                    </div>
+                <div id="story-content" class="space-y-4 text-[8px] leading-loose tracking-widest text-left max-h-[400px] overflow-y-auto pr-2">
+                    <p id="s1" class="opacity-0">Hero <span class="text-yellow-500">IDA</span> fought <span class="text-red-600">DIABLO</span> and lost.</p>
+                    
+                    <p id="s2" class="opacity-0">Diablo banished the hero to the shifting world of <span class="text-purple-500">TETIS</span> and mocked: <span class="text-red-500 italic">"PLAY TETIS NOOOOOBI!!!"</span></p>
+
+                    <p id="s3" class="opacity-0">Now, Ida must defeat Diablo in this strange realm to destroy the demon once and for all.</p>
+
+                    <p id="s4" class="opacity-0">At <span class="text-red-500">LEVEL 5</span>, the Boss Bar appears. Strike back by clearing lines. Diablo has <span class="text-red-500">10 HP</span>.</p>
+
+                    <p id="s5" class="opacity-0">Three angels offer their light to the hero:</p>
+
+                    <ul id="s6" class="opacity-0 space-y-2 border-l-2 border-blue-900 pl-4">
+                        <li><span class="text-blue-400">JUSTICE</span> (40 Mana): Cleanse. Clears the bottom 6 rows.</li>
+                        <li><span class="text-green-400">MANDALA</span> (25 Mana): Slow. Slows pieces for 6 seconds.</li>
+                        <li><span class="text-yellow-400">ZEY</span> (15 Mana): Score Boost. Instantly grants 500 points.</li>
+                    </ul>
                 </div>
 
-                <!-- Controls Grid -->
-                <div class="grid grid-cols-3 gap-2 w-full">
-                    <!-- Top Row: ROTATE -->
-                    <button id="btn-rotate" class="col-span-3 game-button bg-purple-600 text-white p-2 rounded-xl retro-font text-sm">
-                        ROTATE
-                    </button>
-                    
-                    <!-- Middle Row: LEFT, DOWN, RIGHT -->
-                    <button id="btn-left" class="game-button bg-blue-500 text-white p-2 rounded-xl retro-font text-lg">
-                        &lt;
-                    </button>
-                    <button id="btn-down" class="game-button bg-yellow-500 text-gray-900 p-2 rounded-xl retro-font text-sm">
-                        DOWN
-                    </button>
-                    <button id="btn-right" class="game-button bg-blue-500 text-white p-2 rounded-xl retro-font text-lg">
-                        &gt;
-                    </button>
-                    
-                    <!-- Bottom Row: HARD DROP -->
-                    <button id="btn-hard-drop" class="col-span-3 game-button bg-red-600 text-white p-2 rounded-xl retro-font text-xs mt-2">
-                        HARD DROP
-                    </button>
+                <div id="s7" class="opacity-0 py-2">
+                    <p class="text-red-600 text-[12px] animate-pulse font-bold">REDEEM THE LEGEND.</p>
                 </div>
-            </div>
-        </div>
 
-        <!-- GAME OVER MODAL -->
-        <div id="game-over-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center z-50">
-            <div class="bg-gray-800 p-5 rounded-xl shadow-2xl border-4 border-red-500 text-center space-y-3">
-                <h2 class="retro-font text-xl text-red-400">GAME OVER!</h2>
-                <p class="text-md">Final Score: <span id="final-score" class="text-yellow-400">0</span></p>
-                <button id="restart-button" class="retro-font px-3 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-xs">
-                    Play Again
+                <button id="play-button" class="opacity-0 w-full py-4 bg-red-950/40 hover:bg-red-900 border border-red-600 text-white text-[10px] tracking-widest transition-all">
+                    ENTER IF YOU DARE!
                 </button>
             </div>
         </div>
+
+        <div id="game-screen" class="hidden w-full flex flex-col items-center">
+            <div id="boss-container" class="boss-bar-container">
+                <div id="boss-fill"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-[7px] text-white font-bold tracking-widest pointer-events-none uppercase">Diablo [HP: <span id="boss-hp">10</span>]</div>
+            </div>
+
+            <div id="curse-msg" class="text-center h-4 text-[7px] text-red-500 mb-1 font-bold opacity-0 uppercase">Diablo Curses You!</div>
+            
+            <div class="flex justify-between w-full max-w-[220px] mb-1 text-[7px] text-red-500/80">
+                <div>SCORE: <span id="score" class="text-white">0</span></div>
+                <div>LVL: <span id="level" class="text-white">1</span></div>
+            </div>
+
+            <div class="mana-bar-container">
+                <div id="mana-fill"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-[6px] text-white pointer-events-none uppercase">Spirit Mana</div>
+            </div>
+
+            <div id="game-container">
+                <div id="diablo-bg">👹</div>
+                <div id="hell-fog"></div>
+                <div id="curse-overlay" class="curse-overlay"></div>
+                <div id="skill-flash" class="skill-flash"></div>
+                <div id="game-board"></div>
+            </div>
+
+            <div class="skill-bar">
+                <button id="skill-justice" class="skill-btn">JUSTICE (40)<br>CLEANSE</button>
+                <button id="skill-mandala" class="skill-btn">MANDALA (25)<br>SLOW</button>
+                <button id="skill-zey" class="skill-btn">ZEY (15)<br>+500 PT</button>
+            </div>
+
+            <div id="arcade-input-area" class="arcade-controls">
+                <button id="btn-rotate" class="ctrl-btn btn-action">
+                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                </button>
+                
+                <div class="next-preview-container">
+                    <div class="next-label">NEXT</div>
+                    <div id="next-piece-preview"></div>
+                </div>
+
+                <button id="btn-hard-drop" class="ctrl-btn btn-danger">
+                    <svg viewBox="0 0 24 24"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></svg>
+                </button>
+                
+                <button id="btn-left" class="ctrl-btn"><svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg></button>
+                <button id="btn-down" class="ctrl-btn"><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>
+                <button id="btn-right" class="ctrl-btn"><svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></button>
+            </div>
+        </div>
+
+        <div id="modal-screen" class="fixed inset-0 bg-black/95 hidden flex flex-col items-center justify-center z-50 p-6">
+            <h2 id="modal-title" class="diablo-text text-2xl mb-6 text-center"></h2>
+            <div id="modal-desc" class="text-[9px] mb-10 text-center text-gray-400 leading-loose max-w-xs"></div>
+            <button id="modal-button" class="retro-font px-8 py-5 bg-red-950 text-white text-xs border-b-2 border-red-900"></button>
+        </div>
     </div>
 
-    <script type="module">
-        // Tetris Game Logic - Poop Edition!
-        
-        // --- CONFIG ---
-        const GRID_WIDTH = 10;
-        const GRID_HEIGHT = 20;
-        const INITIAL_DROP_SPEED = 1000; // ms
-        const SCORE_PER_LINE = 100;
-        const LEVEL_UP_LINES = 10;
-        const BLOCK_CONTENT = '💩';
-        const EMPTY_CELL = 0;
-        
-        // --- DOM Elements ---
-        const startScreen = document.getElementById('start-screen');
-        const gameScreen = document.getElementById('game-screen');
-        const gameBoard = document.getElementById('game-board');
-        const scoreDisplay = document.getElementById('score');
-        const levelDisplay = document.getElementById('level');
-        const nextPiecePreview = document.getElementById('next-piece-preview');
-        const gameOverModal = document.getElementById('game-over-modal');
-        const finalScoreDisplay = document.getElementById('final-score');
-        const audioPrompt = document.getElementById('audio-prompt');
-
-        // --- GAME SOUNDS (Tone.js) ---
-        let audioContextStarted = false;
-
-        // Setup the sound synths 
-        const moveSynth = new Tone.Synth({
-            oscillator: { type: "square" },
-            envelope: { attack: 0.001, decay: 0.05, sustain: 0.0, release: 0.01 }
-        }).toDestination();
-
-        const lineClearSynth = new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: "sawtooth" },
-            envelope: { attack: 0.01, decay: 0.2, sustain: 0.0, release: 0.1 }
-        }).toDestination();
-
-        const lockSynth = new Tone.MembraneSynth({
-            envelope: { attack: 0.001, decay: 0.1, sustain: 0.0, release: 0.05 },
-            octaves: 0.5
-        }).toDestination();
-
-        const gameOverNoise = new Tone.NoiseSynth({
-            noise: { type: "pink" },
-            envelope: { attack: 0.01, decay: 0.5, sustain: 0.0 }
-        }).toDestination();
-
-        function playMoveSound() {
-            if (!audioContextStarted) return;
-            moveSynth.triggerAttackRelease("C5", "32n");
-        }
-
-        function playLockSound() {
-            if (!audioContextStarted) return;
-            lockSynth.triggerAttackRelease("C2", "8n");
-        }
-
-        function playLineClearSound(lines) {
-            if (!audioContextStarted) return;
-            const root = lines === 4 ? "C5" : "C4"; 
-            lineClearSynth.triggerAttackRelease([root, "E4", "G4"], "8n");
-        }
-        
-        function playLevelUpSound() {
-            if (!audioContextStarted) return;
-            const now = Tone.now();
-            moveSynth.triggerAttackRelease("G5", "16n", now);
-            moveSynth.triggerAttackRelease("C6", "16n", now + 0.08);
-        }
-
-        function playGameOverSound() {
-            if (!audioContextStarted) return;
-            gameOverNoise.triggerAttackRelease("8n");
-            lockSynth.triggerAttackRelease("G#1", "4n");
-        }
-
-
-        // --- GAME STATE ---
-        let gameGrid;
-        let currentPiece;
-        let nextPiece;
-        let pieceX;
-        let pieceY;
-        let score = 0;
-        let linesCleared = 0;
-        let level = 1;
-        let dropInterval;
-        let isGameOver = false;
-
-        // --- PIECE DEFINITIONS (Shapes & Colors) ---
-        const PIECES = [
-            { shape: [[1, 1, 1, 1]], id: 1 },
-            { shape: [[2, 0, 0], [2, 2, 2]], id: 2 },
-            { shape: [[0, 0, 3], [3, 3, 3]], id: 3 },
-            { shape: [[4, 4], [4, 4]], id: 4 },
-            { shape: [[0, 5, 5], [5, 5, 0]], id: 5 },
-            { shape: [[0, 6, 0], [6, 6, 6]], id: 6 },
-            { shape: [[7, 7, 0], [0, 7, 7]], id: 7 },
+    <script>
+        const GRID_W = 10, GRID_H = 20;
+        const SHAPES = [
+            [[1,1,1,1]], [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]], 
+            [[1,1],[1,1]], [[0,1,1],[1,1,0]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]]
         ];
+        
+        const FALLING_SYMBOL = '👹'; 
+        const LANDED_SYMBOL = '💀'; 
+        const LAVA_SYMBOL = '🔥';
+        const BOSS_LEVEL = 5;
 
-        // --- CORE GAME FUNCTIONS ---
+        let grid, current, next, posX, posY, score, level, timer, audioStarted = false;
+        let curseActive = false;
+        let bossHealth = 10;
+        let isBossFight = false;
+        let isGameOver = false;
+        let isBlind = false;
+        
+        let mana = 0;
+        const MAX_MANA = 100;
+        const SKILLS = {
+            JUSTICE: { cost: 40, name: 'Justice' },
+            MANDALA: { cost: 25, name: 'Mandala' },
+            ZEY: { cost: 15, name: 'Zey' }
+        };
 
-        function createGrid(width, height) {
-            return Array.from({ length: height }, () => Array(width).fill(EMPTY_CELL));
-        }
+        const moveSynth = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 2, oscillator: { type: "sine" } }).toDestination();
+        moveSynth.volume.value = -12;
+        const rotateSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+        rotateSynth.set({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 } });
+        rotateSynth.volume.value = -18;
+        const clearSynth = new Tone.FMSynth().toDestination();
+        clearSynth.volume.value = -10;
+        const curseSynth = new Tone.MonoSynth({ oscillator: { type: "sawtooth" }, envelope: { attack: 0.1, decay: 0.5, sustain: 0.8, release: 2 } }).toDestination();
+        curseSynth.volume.value = -6;
+        const skillSynth = new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.01, decay: 0.4, release: 0.2 } }).toDestination();
+        skillSynth.volume.value = -8;
+        const voidDrone = new Tone.Oscillator(40, "sine").toDestination();
+        voidDrone.volume.value = -25;
+        const enterSynth = new Tone.DuoSynth().toDestination();
+        enterSynth.volume.value = -2;
+        const victorySynth = new Tone.PolySynth(Tone.Synth).toDestination();
 
-        function rotate(shape) {
-            const rows = shape.length;
-            const cols = shape[0].length;
-            const newShape = createGrid(rows, cols);
-
-            for (let y = 0; y < rows; y++) {
-                for (let x = 0; x < cols; x++) {
-                    newShape[x][rows - 1 - y] = shape[y][x];
+        function playSound(type) {
+            if (!audioStarted && type !== 'enter_pre') return;
+            try {
+                if (type === 'enter') { 
+                    enterSynth.triggerAttackRelease("C2", "2n"); 
+                    enterSynth.triggerAttackRelease("G1", "2n", "+0.2");
                 }
-            }
-            return newShape;
+                if (type === 'move') moveSynth.triggerAttackRelease("G1", "32n");
+                if (type === 'rotate') rotateSynth.triggerAttackRelease(["C4", "E4"], "16n");
+                if (type === 'clear') { clearSynth.triggerAttackRelease("C5", "16n"); }
+                if (type === 'curse') { curseSynth.triggerAttackRelease("C2", "2n"); }
+                if (type === 'skill') { skillSynth.triggerAttackRelease("G4", "8n"); }
+                if (type === 'start') voidDrone.start();
+                if (type === 'victory') { voidDrone.stop(); victorySynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "2n"); }
+            } catch (e) {}
         }
 
-        function checkCollision(grid, shape, x, y) {
-            const pieceRows = shape.length;
-            const pieceCols = shape[0].length;
+        // STARTUP CINEMATIC
+        function startCinematic() {
+            const lines = ['intro-l1', 'intro-l2', 'intro-l3', 'intro-l4', 'intro-l5', 'intro-l6', 'intro-l7'];
+            lines.forEach((id, idx) => {
+                setTimeout(() => {
+                    document.getElementById(id).classList.add('visible');
+                }, idx * 2500);
+            });
 
-            for (let row = 0; row < pieceRows; row++) {
-                for (let col = 0; col < pieceCols; col++) {
-                    if (shape[row][col] !== EMPTY_CELL) {
-                        const newX = x + col;
-                        const newY = y + row;
-
-                        // Check boundaries
-                        if (newX < 0 || newX >= GRID_WIDTH || newY >= GRID_HEIGHT) {
-                            return true; 
-                        }
-
-                        // Check collision with locked blocks (only for y >= 0)
-                        if (newY >= 0 && grid[newY][newX] !== EMPTY_CELL) {
-                            return true; 
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        function generateNewPiece() {
-            const randomIndex = Math.floor(Math.random() * PIECES.length);
-            return {
-                ...PIECES[randomIndex],
-                shape: PIECES[randomIndex].shape.map(row => [...row]), 
+            const onStart = () => {
+                window.removeEventListener('keydown', onStart);
+                window.removeEventListener('touchstart', onStart);
+                document.getElementById('developer-intro').style.display = 'none';
+                document.getElementById('control-setup').style.display = 'flex';
             };
+
+            window.addEventListener('keydown', onStart);
+            window.addEventListener('touchstart', onStart);
         }
 
-        function placePiece() {
-            if (nextPiece) {
-                currentPiece = nextPiece;
+        // CONTROL TYPE HANDLING
+        document.getElementById('set-mobile').onclick = () => {
+            document.getElementById('arcade-input-area').style.display = 'grid';
+            showStory();
+        };
+        document.getElementById('set-pc').onclick = () => {
+            document.getElementById('arcade-input-area').style.display = 'none';
+            showStory();
+        };
+
+        function showStory() {
+            document.getElementById('control-setup').style.display = 'none';
+            document.getElementById('story-screen').classList.remove('hidden');
+            animateStory();
+        }
+
+        function animateStory() {
+            ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 'play-button'].forEach((id, idx) => {
+                setTimeout(() => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('fade-in');
+                        const container = document.getElementById('story-content');
+                        if(container) container.scrollTop = container.scrollHeight;
+                    }
+                }, idx * 1500);
+            });
+        }
+
+        function initGrid() { return Array.from({length: GRID_H}, () => Array(GRID_W).fill(0)); }
+        function createPiece() { return { shape: SHAPES[Math.floor(Math.random()*SHAPES.length)] }; }
+
+        function triggerCurse() {
+            if (curseActive || isGameOver) return;
+            curseActive = true;
+            const msg = document.getElementById('curse-msg');
+            const rand = Math.random();
+            
+            if (rand > 0.66) {
+                msg.textContent = "HELLFOG BLINDNESS!";
+                isBlind = true;
+                document.getElementById('hell-fog').classList.add('blind-active');
+            } else if (rand > 0.33) {
+                msg.textContent = "LAVA RISING!";
+                grid.shift(); 
+                grid.push(Array(GRID_W).fill(2));
             } else {
-                currentPiece = generateNewPiece();
-            }
-            nextPiece = generateNewPiece();
-
-            pieceX = Math.floor((GRID_WIDTH - currentPiece.shape[0].length) / 2);
-            pieceY = 0;
-
-            // GAME OVER CHECK: If the new piece collides immediately, the game is over
-            if (checkCollision(gameGrid, currentPiece.shape, pieceX, pieceY)) {
-                endGame();
-                return; // Stop game logic execution
-            }
-            drawGame();
-        }
-
-        function lockPiece() {
-            const shape = currentPiece.shape;
-            const id = currentPiece.id;
-            
-            playLockSound();
-
-            for (let row = 0; row < shape.length; row++) {
-                for (let col = 0; col < shape[0].length; col++) {
-                    if (shape[row][col] !== EMPTY_CELL) {
-                        if (pieceY + row >= 0) {
-                            gameGrid[pieceY + row][pieceX + col] = id;
-                        }
-                    }
-                }
-            }
-            clearLines();
-            // Attempt to place the next piece, which includes the game over check
-            placePiece();
-        }
-
-        function movePiece(dx, dy) {
-            if (isGameOver) return false;
-            
-            const pieceCanMove = !checkCollision(gameGrid, currentPiece.shape, pieceX + dx, pieceY + dy);
-
-            if (pieceCanMove) {
-                pieceX += dx;
-                pieceY += dy;
-                drawGame();
-                
-                if (dx !== 0 || dy > 0) {
-                    playMoveSound();
-                }
-                
-                return true;
-            }
-            
-            // Fix: If collision on downward move (dy > 0) AND the piece is at the bottom/top of a block, lock immediately
-            if (dy > 0) {
-                lockPiece();
-                return false;
-            }
-            
-            return false;
-        }
-
-        function rotateCurrentPiece() {
-            if (isGameOver) return;
-            const rotatedShape = rotate(currentPiece.shape);
-            
-            const offsets = [
-                [0, 0], 
-                [-1, 0], 
-                [1, 0],  
-                [0, -1], 
-            ];
-
-            for (const [offsetX, offsetY] of offsets) {
-                if (!checkCollision(gameGrid, rotatedShape, pieceX + offsetX, pieceY + offsetY)) {
-                    currentPiece.shape = rotatedShape;
-                    pieceX += offsetX;
-                    pieceY += offsetY;
-                    drawGame();
-                    playMoveSound(); 
-                    return;
-                }
-            }
-        }
-
-        function hardDrop() {
-            if (isGameOver) return;
-            let finalY = pieceY;
-            // Find the lowest possible position
-            while (!checkCollision(gameGrid, currentPiece.shape, pieceX, finalY + 1)) {
-                finalY++;
-            }
-            if (finalY !== pieceY) {
-                lockSynth.triggerAttackRelease("C3", "4n"); 
-            }
-            pieceY = finalY;
-            // Lock the piece instantly
-            lockPiece(); 
-        }
-
-        function clearLines() {
-            let linesToClear = 0;
-            const newGrid = [];
-
-            for (let y = 0; y < GRID_HEIGHT; y++) {
-                if (gameGrid[y].every(cell => cell !== EMPTY_CELL)) {
-                    linesToClear++;
-                } else {
-                    newGrid.push(gameGrid[y]);
+                msg.textContent = "DIABLO BURNS YOU!";
+                for(let i=0; i<5; i++) {
+                    let rx = Math.floor(Math.random() * GRID_W);
+                    let ry = Math.floor(Math.random() * (GRID_H - 5)) + 5;
+                    grid[ry][rx] = 2;
                 }
             }
 
-            while (newGrid.length < GRID_HEIGHT) {
-                newGrid.unshift(Array(GRID_WIDTH).fill(EMPTY_CELL));
+            msg.style.opacity = "1";
+            document.getElementById('curse-overlay').style.display = "block";
+            document.getElementById('game-container').classList.add('shake');
+            playSound('curse');
+
+            setTimeout(() => {
+                msg.style.opacity = "0"; 
+                document.getElementById('curse-overlay').style.display = "none";
+                document.getElementById('game-container').classList.remove('shake'); 
+                isBlind = false;
+                document.getElementById('hell-fog').classList.remove('blind-active');
+                curseActive = false;
+                draw();
+            }, 3000);
+        }
+
+        function updateRPG() {
+            const manaFill = document.getElementById('mana-fill');
+            manaFill.style.width = `${Math.min(mana, MAX_MANA)}%`;
+
+            Object.keys(SKILLS).forEach(key => {
+                const btn = document.getElementById(`skill-${key.toLowerCase()}`);
+                if (mana >= SKILLS[key].cost) btn.classList.add('available');
+                else btn.classList.remove('available');
+            });
+            
+            if (level >= BOSS_LEVEL && !isBossFight) {
+                isBossFight = true;
+                document.getElementById('boss-container').style.display = 'block';
+                document.getElementById('game-container').classList.add('boss-active');
             }
 
-            gameGrid = newGrid;
-            
-            if (linesToClear > 0) {
-                playLineClearSound(linesToClear);
-                score += SCORE_PER_LINE * linesToClear * linesToClear; 
-                linesCleared += linesToClear;
-                updateScoreAndLevel();
+            if (isBossFight) {
+                document.getElementById('boss-fill').style.width = `${(bossHealth/10)*100}%`;
+                document.getElementById('boss-hp').textContent = Math.max(0, bossHealth);
+            } else {
+                document.getElementById('boss-container').style.display = 'none';
+                document.getElementById('game-container').classList.remove('boss-active');
             }
         }
-        
-        function updateScoreAndLevel() {
-            const oldLevel = level;
-            const newLevel = Math.floor(linesCleared / LEVEL_UP_LINES) + 1;
-            
-            if (newLevel > oldLevel) {
+
+        function useSkill(skillKey) {
+            const skill = SKILLS[skillKey];
+            if (mana < skill.cost || isGameOver) return;
+            mana -= skill.cost;
+            updateRPG();
+            playSound('skill');
+            const flash = document.getElementById('skill-flash');
+            flash.style.display = 'block';
+            flash.style.background = 'rgba(255, 255, 255, 0.2)';
+            setTimeout(() => flash.style.display = 'none', 100);
+
+            if(skillKey === 'JUSTICE') { for(let i=0; i<6; i++) { grid.pop(); grid.unshift(Array(GRID_W).fill(0)); } }
+            if(skillKey === 'MANDALA') {
+                clearInterval(timer);
+                timer = setInterval(() => move(0, 1), 2000);
+                setTimeout(() => { if (!isGameOver) { clearInterval(timer); timer = setInterval(() => move(0, 1), 800); } }, 6000);
+            }
+            if (skillKey === 'ZEY') { 
+                score += 500; 
+                document.getElementById('score').textContent = score;
+                checkLevelUp();
+            }
+            draw();
+        }
+
+        function checkLevelUp() {
+            const newLevel = Math.floor(score / 500) + 1;
+            if (newLevel > level) {
                 level = newLevel;
-                playLevelUpSound();
-                clearInterval(dropInterval);
-                const newSpeed = INITIAL_DROP_SPEED / level;
-                dropInterval = setInterval(gameLoop, newSpeed);
+                document.getElementById('level').textContent = level;
+                updateRPG();
+            }
+        }
+
+        function showGameOver() {
+            isGameOver = true;
+            clearInterval(timer);
+            const modal = document.getElementById('modal-screen');
+            modal.classList.remove('hidden');
+            document.getElementById('modal-title').textContent = "DIABLO LAUGHS";
+            document.getElementById('modal-desc').innerHTML = `IDA HAS FALLEN. DIABLO STILL LIVES AND THE CURSE REMAINS...<br>FINAL SCORE: ${score}`;
+            document.getElementById('modal-button').textContent = "RETRY, NOOBI";
+            document.getElementById('modal-button').onclick = startGame;
+        }
+
+        function draw() {
+            const board = document.getElementById('game-board');
+            if(!board) return;
+            board.innerHTML = '';
+            for(let y=0; y<GRID_H; y++) {
+                for(let x=0; x<GRID_W; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    if(grid[y][x]) {
+                        cell.textContent = grid[y][x] === 2 ? LAVA_SYMBOL : LANDED_SYMBOL;
+                        cell.style.backgroundColor = grid[y][x] === 2 ? '#330000' : '#110a00';
+                    }
+                    board.appendChild(cell);
+                }
             }
             
-            scoreDisplay.textContent = score;
-            levelDisplay.textContent = level;
-        }
+            current.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if(value && posY+dy >= 0) {
+                        const idx = (posY + dy) * GRID_W + (posX + dx);
+                        if(board.children[idx]) {
+                            board.children[idx].textContent = FALLING_SYMBOL;
+                            board.children[idx].style.backgroundColor = '#2d1a00';
+                            board.children[idx].classList.add('active-block');
+                        }
+                    }
+                });
+            });
 
-        function renderGridCells() {
-            // Setup the main game board
-            gameBoard.innerHTML = '';
-            for (let i = 0; i < GRID_WIDTH * GRID_HEIGHT; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'grid-cell transition-colors duration-50';
-                cell.dataset.index = i;
-                gameBoard.appendChild(cell);
-            }
-            // Setup the next piece preview board
-            nextPiecePreview.innerHTML = '';
-            for (let i = 0; i < 16; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'grid-cell bg-gray-900 border-gray-700';
-                nextPiecePreview.appendChild(cell);
-            }
-            nextPiecePreview.style.gridTemplateColumns = 'repeat(4, 1fr)';
-            nextPiecePreview.style.gridTemplateRows = 'repeat(4, 1fr)';
-            nextPiecePreview.style.display = 'grid';
-        }
-
-        function drawGame() {
-            if (isGameOver) return;
+            const preview = document.getElementById('next-piece-preview');
+            preview.innerHTML = '';
+            const nextShape = next.shape;
+            const cols = nextShape[0].length;
+            preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            preview.style.width = `${cols * 10}px`;
             
-            const cells = gameBoard.children;
-            let i = 0;
-            for (let y = 0; y < GRID_HEIGHT; y++) {
-                for (let x = 0; x < GRID_WIDTH; x++) {
-                    const cell = cells[i];
-                    cell.textContent = '';
-                    if (gameGrid[y][x] !== EMPTY_CELL) {
-                        cell.textContent = BLOCK_CONTENT;
-                        cell.style.backgroundColor = 'rgb(100, 40, 0)';
-                        cell.style.borderColor = '#333';
-                    } else {
-                        cell.style.backgroundColor = '#000';
-                        cell.style.borderColor = '#111';
+            nextShape.forEach((row, dy) => {
+                row.forEach((val, dx) => {
+                    const c = document.createElement('div');
+                    c.className = 'flex items-center justify-center text-[6px] h-3 w-3';
+                    if (val) {
+                        c.textContent = FALLING_SYMBOL;
+                        c.style.color = '#aa3333';
                     }
-                    i++;
-                }
-            }
-
-            // Draw the current falling piece
-            const shape = currentPiece.shape;
-            for (let row = 0; row < shape.length; row++) {
-                for (let col = 0; col < shape[0].length; col++) {
-                    if (shape[row][col] !== EMPTY_CELL) {
-                        const absY = pieceY + row;
-                        const absX = pieceX + col;
-
-                        if (absY >= 0 && absY < GRID_HEIGHT && absX >= 0 && absX < GRID_WIDTH) {
-                            const index = absY * GRID_WIDTH + absX;
-                            cells[index].textContent = BLOCK_CONTENT;
-                            cells[index].style.backgroundColor = 'rgb(120, 60, 0)';
-                            cells[index].style.borderColor = '#444';
-                        }
-                    }
-                }
-            }
-
-            // Draw the next piece preview
-            const previewCells = nextPiecePreview.children;
-            const nextShape = nextPiece.shape;
-            for (let k = 0; k < 16; k++) {
-                previewCells[k].textContent = '';
-                previewCells[k].style.backgroundColor = '#1a1a1a';
-            }
-
-            for (let row = 0; row < nextShape.length; row++) {
-                for (let col = 0; col < nextShape[0].length; col++) {
-                    if (nextShape[row][col] !== EMPTY_CELL) {
-                        const index = row * 4 + col;
-                        if (index < 16) {
-                             previewCells[index].textContent = BLOCK_CONTENT;
-                             previewCells[index].style.backgroundColor = 'rgb(120, 60, 0)';
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Game loop only handles the automatic downward movement
-        function gameLoop() {
-            // movePiece handles the collision check and calls lockPiece() immediately if a collision is found.
-            movePiece(0, 1);
+                    preview.appendChild(c);
+                });
+            });
         }
 
-        async function initializeAudioContext() {
-            if (Tone.context.state !== 'running') {
-                await Tone.start();
-                audioContextStarted = true;
-                audioPrompt.classList.add('hidden');
+        function collide(newX, newY, newShape = current.shape) {
+            return newShape.some((row, dy) => row.some((val, dx) => {
+                if(!val) return false;
+                const x = newX + dx, y = newY + dy;
+                return x < 0 || x >= GRID_W || y >= GRID_H || (y >= 0 && grid[y][x]);
+            }));
+        }
+
+        function lock() {
+            current.shape.forEach((row, dy) => row.forEach((val, dx) => {
+                if(val && posY+dy >= 0) grid[posY+dy][posX+dx] = 1;
+            }));
+            let cleared = 0;
+            for(let y=GRID_H-1; y>=0; y--) {
+                if(grid[y].every(cell => cell !== 0)) { grid.splice(y, 1); grid.unshift(Array(GRID_W).fill(0)); cleared++; y++; }
             }
+            if(cleared) {
+                score += cleared * 100;
+                mana = Math.min(MAX_MANA, mana + (cleared * 15));
+                if (isBossFight) bossHealth -= cleared;
+                checkLevelUp();
+                document.getElementById('score').textContent = score;
+
+                if (bossHealth <= 0) {
+                     isGameOver = true;
+                     clearInterval(timer);
+                     playSound('victory');
+                     const modal = document.getElementById('modal-screen');
+                     modal.classList.remove('hidden');
+                     document.getElementById('modal-title').textContent = "VICTORY!";
+                     document.getElementById('modal-desc').innerHTML = `DIABLO IS BANISHED! IDA IS FINALLY FREE!<br>FINAL SCORE: ${score}`;
+                     document.getElementById('modal-button').textContent = "NEW LEGEND";
+                     document.getElementById('modal-button').onclick = () => window.location.reload();
+                     return;
+                }
+                playSound('clear');
+                updateRPG();
+            }
+            if (Math.random() < (isBossFight ? 0.4 : 0.15)) triggerCurse();
+            spawn();
+        }
+
+        function spawn() {
+            current = next || createPiece();
+            next = createPiece();
+            posX = 3; posY = 0;
+            if(collide(posX, posY)) showGameOver();
+            draw();
+        }
+
+        function move(dx, dy) {
+            if(isGameOver) return;
+            if(!collide(posX + dx, posY + dy)) { 
+                posX += dx; posY += dy; 
+                if(dx !== 0 || dy !== 0) playSound('move');
+                draw(); 
+                return true; 
+            }
+            if(dy > 0) lock(); return false;
+        }
+
+        function rotate() {
+            const r = current.shape[0].map((_, i) => current.shape.map(row => row[i]).reverse());
+            if(!collide(posX, posY, r)) { current.shape = r; draw(); playSound('rotate'); }
         }
 
         async function startGame() {
-            // Re-initialize game state
-            if (!audioContextStarted) {
-                await initializeAudioContext();
-            }
-
-            score = 0;
-            linesCleared = 0;
-            level = 1;
-            isGameOver = false;
-            gameGrid = createGrid(GRID_WIDTH, GRID_HEIGHT);
+            if(!audioStarted) { await Tone.start(); audioStarted = true; }
             
-            nextPiece = generateNewPiece();
-            placePiece(); // Includes Game Over check
-
-            updateScoreAndLevel(); 
+            document.getElementById('curse-overlay').style.display = "none";
+            document.getElementById('game-container').classList.remove('shake');
+            document.getElementById('curse-msg').style.opacity = "0";
+            document.getElementById('hell-fog').classList.remove('blind-active');
             
-            if (dropInterval) clearInterval(dropInterval);
-            dropInterval = setInterval(gameLoop, INITIAL_DROP_SPEED / level);
-
-            // Update UI state
-            startScreen.classList.add('hidden');
-            gameScreen.classList.remove('hidden');
-            gameOverModal.classList.add('hidden');
+            playSound('enter');
+            
+            setTimeout(() => {
+                document.getElementById('story-screen').classList.add('hidden');
+                document.getElementById('modal-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                
+                grid = initGrid(); 
+                score = 0; 
+                level = 1; 
+                mana = 0; 
+                bossHealth = 10; 
+                isBossFight = false; 
+                isGameOver = false;
+                curseActive = false;
+                isBlind = false;
+                
+                document.getElementById('score').textContent = score;
+                document.getElementById('level').textContent = level;
+                
+                spawn();
+                if(timer) clearInterval(timer);
+                timer = setInterval(() => move(0, 1), 800);
+                playSound('start');
+                updateRPG();
+            }, 300);
         }
 
-        function endGame() {
-            isGameOver = true;
-            clearInterval(dropInterval); // Stop the falling piece loop
-            playGameOverSound();
-            finalScoreDisplay.textContent = score;
-            gameOverModal.classList.remove('hidden'); // Show the modal
-        }
-        
-        // --- EVENT HANDLERS ---
-        
-        function handleKeydown(e) {
-            // Guard clause to prevent input when game is over
-            if (isGameOver) return; 
-            switch (e.key) {
-                case 'ArrowLeft':
-                    movePiece(-1, 0);
-                    break;
-                case 'ArrowRight':
-                    movePiece(1, 0);
-                    break;
-                case 'ArrowDown':
-                    // Gravity is already handled by gameLoop. This is for faster descent.
-                    movePiece(0, 1); 
-                    break;
-                case 'ArrowUp':
-                case ' ': 
-                    rotateCurrentPiece();
-                    break;
-                case 'Enter': 
-                    hardDrop();
-                    break;
-            }
-        }
-        
-        // --- INITIALIZATION ---
-        
-        document.getElementById('play-button').addEventListener('click', startGame);
-        document.getElementById('restart-button').addEventListener('click', startGame);
-        document.addEventListener('keydown', handleKeydown);
+        // KEYBOARD LISTENERS
+        window.addEventListener('keydown', (e) => {
+            if (isGameOver || document.getElementById('game-screen').classList.contains('hidden')) return;
+            if (e.key === 'ArrowLeft') move(-1, 0);
+            if (e.key === 'ArrowRight') move(1, 0);
+            if (e.key === 'ArrowDown') move(0, 1);
+            if (e.key === 'ArrowUp') rotate();
+            if (e.key === ' ') while(move(0,1));
+            // Skill shortcuts
+            if (e.key === '1') useSkill('JUSTICE');
+            if (e.key === '2') useSkill('MANDALA');
+            if (e.key === '3') useSkill('ZEY');
+        });
 
-        // Mobile Controls
-        document.getElementById('btn-left').addEventListener('click', () => movePiece(-1, 0));
-        document.getElementById('btn-right').addEventListener('click', () => movePiece(1, 0));
-        document.getElementById('btn-down').addEventListener('click', () => movePiece(0, 1));
-        document.getElementById('btn-rotate').addEventListener('click', rotateCurrentPiece);
-        document.getElementById('btn-hard-drop').addEventListener('click', hardDrop);
+        window.onload = () => {
+            startCinematic();
+        };
 
-        // Initial DOM rendering
-        renderGridCells();
-        
-        if (Tone.context.state !== 'running') {
-            audioPrompt.classList.remove('hidden');
-        }
-
+        document.getElementById('play-button').onclick = startGame;
+        document.getElementById('btn-left').onclick = () => move(-1, 0);
+        document.getElementById('btn-right').onclick = () => move(1, 0);
+        document.getElementById('btn-down').onclick = () => move(0, 1);
+        document.getElementById('btn-rotate').onclick = () => rotate();
+        document.getElementById('btn-hard-drop').onclick = () => { while(move(0, 1)); };
+        document.getElementById('skill-justice').onclick = () => useSkill('JUSTICE');
+        document.getElementById('skill-mandala').onclick = () => useSkill('MANDALA');
+        document.getElementById('skill-zey').onclick = () => useSkill('ZEY');
     </script>
 </body>
 </html>
