@@ -313,9 +313,13 @@
 
     <!-- CONTROL SETUP SCREEN -->
     <div id="control-setup">
-        <h2 class="text-red-600 text-[10px] mb-4">CHOOSE YOUR WEAPON</h2>
+        <h2 class="text-red-600 text-[10px] mb-4 text-center">CHOOSE YOUR WEAPON</h2>
         <button id="set-mobile" class="w-64 py-4 bg-blue-900/30 border border-blue-500 text-white text-[10px] tracking-widest hover:bg-blue-800 transition-all">MOBILE CONTROLS (BUTTONS)</button>
         <button id="set-pc" class="w-64 py-4 bg-red-900/30 border border-red-500 text-white text-[10px] tracking-widest hover:bg-red-800 transition-all">PC CONTROLS (KEYBOARD)</button>
+        <div class="text-[8px] text-gray-500 mt-4 text-center max-w-xs leading-loose">
+            PC COMMANDS: ARROWS TO MOVE/ROTATE. SPACE TO HARD DROP.<br>
+            MAGIC SKILLS: 1, 2, 3 BUTTONS.
+        </div>
     </div>
 
     <div id="app-wrapper" class="w-full max-w-md z-10 flex flex-col items-center">
@@ -336,9 +340,9 @@
                     <p id="s5" class="opacity-0">Three angels offer their light to the hero:</p>
 
                     <ul id="s6" class="opacity-0 space-y-2 border-l-2 border-blue-900 pl-4">
-                        <li><span class="text-blue-400">JUSTICE</span> (40 Mana): Cleanse. Clears the bottom 6 rows.</li>
-                        <li><span class="text-green-400">MANDALA</span> (25 Mana): Slow. Slows pieces for 6 seconds.</li>
-                        <li><span class="text-yellow-400">ZEY</span> (15 Mana): Score Boost. Instantly grants 500 points.</li>
+                        <li><span class="text-blue-400">JUSTICE</span> (40 Mana): Cleanse. Clears bottom 6 rows. (Press 1)</li>
+                        <li><span class="text-green-400">MANDALA</span> (25 Mana): Slow. Slows pieces for 6s. (Press 2)</li>
+                        <li><span class="text-yellow-400">ZEY</span> (15 Mana): Score Boost. Grants 500 PT. (Press 3)</li>
                     </ul>
                 </div>
 
@@ -379,9 +383,9 @@
             </div>
 
             <div class="skill-bar">
-                <button id="skill-justice" class="skill-btn">JUSTICE (40)<br>CLEANSE</button>
-                <button id="skill-mandala" class="skill-btn">MANDALA (25)<br>SLOW</button>
-                <button id="skill-zey" class="skill-btn">ZEY (15)<br>+500 PT</button>
+                <button id="skill-justice" class="skill-btn">JUSTICE (40)<br>CLEANSE (1)</button>
+                <button id="skill-mandala" class="skill-btn">MANDALA (25)<br>SLOW (2)</button>
+                <button id="skill-zey" class="skill-btn">ZEY (15)<br>+500 PT (3)</button>
             </div>
 
             <div id="arcade-input-area" class="arcade-controls">
